@@ -8,10 +8,10 @@ class Cuotas{
         this.init();
     }
 
-    init(){
+    async init(){
         this.devex();
-        this.cargarPersonas();
-        this.cargarCuotas();
+        await this.cargarPersonas();
+        await this.cargarCuotas();
     }
 
     devex(){
@@ -85,64 +85,12 @@ class Cuotas{
                             let valid = this.dx.frmCuotas.validate();
                             if(valid.isValid){
                                 let cuota = this.dx.frmCuotas.option('formData');
-                                const { monto, estado } = cuota;
-                                
-                                //Determinar nuevo id de cuotas
-                                let idsCuota = this.cuotas.map(c => c.cuotaId);
-                                let maxId = idsCuota.length > 0 ? Math.max(...idsCuota) + 1 : 0;
     
                                 if(Boolean(this.personaId)){
                                     if(Boolean(this.cuotaId)){
-                                        fetch(`http://localhost:5000/cuotas/${this.personaId}/${this.cuotaId}`,{
-                                            method: 'PUT',
-                                            headers:{
-                                                'Content-Type':'application/json'
-                                            },
-                                            body: JSON.stringify(cuota)
-                                            })
-                                            .then(res => res.json())
-                                            .then((data) => {
-                                                this.cargarCuotas();
-                                                this.dx.mdlCuotas.hide();
-                                                this.dx.toast.option('message','Registro actualizado');
-                                                this.dx.toast.option('type','success');
-                                                this.dx.toast.show();
-                                            })
-                                            .then(() =>{
-                                                setTimeout(() =>{
-                                                    this.cambioEstado(this.personaId);
-                                                },500);
-                                            })
-                                            .catch(error => console.log(error));
+                                        this.guardarCuota(this.personaId,this.cuotaId, cuota);
                                     }else{
-                                        let cuota = {
-                                            cuotaId: maxId + 1,
-                                            personaId: this.personaId,
-                                            monto: monto,
-                                            estado: estado
-                                        }
-        
-                                        fetch(`http://localhost:5000/cuotas`,{
-                                        method: 'POST',
-                                        headers:{
-                                            'Content-Type':'application/json'
-                                        },
-                                        body: JSON.stringify(cuota)
-                                        })
-                                        .then(res => res.json())
-                                        .then((data) => {
-                                            this.cargarCuotas();
-                                            this.dx.mdlCuotas.hide();
-                                            this.dx.toast.option('message','Registrado exitosamente');
-                                            this.dx.toast.option('type','success');
-                                            this.dx.toast.show();
-                                        })
-                                        .then(() =>{
-                                            setTimeout(() =>{
-                                                this.cambioEstado(this.personaId);
-                                            },500);
-                                        })
-                                        .catch(error => console.log(error));
+                                        this.nuevaCuota(cuota);
                                     }
                                 }else{
                                     this.dx.toast.option('message','Debe llenar los datos personales de la persona primero');
@@ -193,25 +141,7 @@ class Cuotas{
                         hint: 'Eliminar cuota',
                         type: 'default',
                         onClick: () =>{
-                            fetch(`http://localhost:5000/cuotas/${this.personaId}/${this.cuotaId}`,{
-                                method: 'DELETE',
-                                headers:{
-                                    'Content-Type':'application/json'
-                                }
-                            })
-                            .then(res => res.json())
-                            .then(data =>{
-                                this.cargarCuotas();
-                                this.dx.mdlEliminarCuota.hide();
-                                this.dx.toast.option('message','Cuota eliminada');
-                                this.dx.toast.option('type','success');
-                                this.dx.toast.show();
-                            })
-                            .then(() =>{
-                                setTimeout(() =>{
-                                    this.cambioEstado(this.personaId);
-                                },500);
-                            })
+                            this.eliminarCuota(this.personaId,this.cuotaId);
                         }
                     }
                 },
@@ -262,7 +192,14 @@ class Cuotas{
                     caption: "Estado",
                     alignment: 'center',
                     cellTemplate: (container,e) =>{
-                        $('<div>').text(e.row.data.estado ? "Pagado" : "No pagado").appendTo(container);
+                        let estado = e.row.data.estado; 
+                        $(`<div class="${estado ? 'bg-success' : 'bg-danger'}">`).css({
+                            'color': 'white',
+                            'border-radius': '5px',
+                            'width': '75%',
+                            'padding': '1%',
+                            'margin': '0 auto 0 auto'
+                        }).text(estado ? "Pagado" : "No pagado").appendTo(container);
                     }
                 },
                 {
@@ -427,39 +364,11 @@ class Cuotas{
     
                 if(valid.isValid){
                     let personas = this.dx.frmPersona.option('formData');
-                    const { nombres, apellidos, numero, ubicacion, monto } = personas;
                     
                     if(Boolean(this.personaId)){
-                        fetch(`http://localhost:5000/personas/${this.personaId}`,{
-                            method: 'PUT',
-                            headers:{
-                                'Content-Type':'application/json'
-                            },
-                            body: JSON.stringify({nombres: nombres, apellidos: apellidos, numero: numero.trim() || '', ubicacion: ubicacion.trim() || '', monto: monto.trim(), estado: 0 })
-                        })
-                        .then(res => res.json())
-                        .then(data =>{
-                            this.cargarPersonas();
-                            this.dx.toast.option('message','Datos personales actualizados');
-                            this.dx.toast.option('type','success');
-                            this.dx.toast.show();
-                        })
+                        this.guardarDatosPersona(this.personaId, personas);
                     }else{   
-                        fetch(`http://localhost:5000/personas`,{
-                            method: 'POST',
-                            headers:{
-                                'Content-Type':'application/json'
-                            },
-                            body: JSON.stringify({nombres: nombres.trim(), apellidos: apellidos.trim(), numero: numero?.trim() || '', ubicacion: ubicacion?.trim() || '', monto: monto.trim(), estado: 0 })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            this.cargarPersonas();
-                            this.personaId = data[0].personaId;
-                            this.dx.toast.option('message','Datos personales guardados');
-                            this.dx.toast.option('type','success');
-                            this.dx.toast.show();
-                        })
+                        this.crearNuevaPersona(personas);
                     }
                 }else{
                     this.dx.toast.option('message','Debe llenar los campos requeridos');
@@ -577,50 +486,188 @@ class Cuotas{
         }).dxMultiView('instance');
     }
 
-    cargarPersonas(){
-        fetch(`http://localhost:5000/personas`)
-        .then(response => response.json())
-        .then(data => {
-            this.personas = [...data];
-            this.dx.gridPersonas.option('dataSource',this.personas);
-            console.log('personas',this.personas);
-        })
-        .catch(error => console.error(error));
+    async cargarPersonas(){
+        try{
+            let res = await fetch(`http://localhost:5000/personas`);
+            if(res.ok){
+                let data = await res.json(); 
+                this.personas = [...data];
+                this.dx.gridPersonas.option('dataSource',this.personas);
+                console.log('personas',this.personas);
+            }
+        }catch(e){
+            console.error(e)
+        }
     }
 
-    cargarCuotas(){
-        fetch(`http://localhost:5000/cuotas`)
-        .then(response => response.json())
-        .then(data => {
-            this.cuotas = [...data];
-            this.dx.gridCuotas.option('dataSource',this.cuotas.filter(c => c.personaId == this.personaId));
-            console.log('cuotas',this.cuotas)
-        })
-        .catch(error => console.log(error));
+    async cargarCuotas(){
+        try{
+            let res = await fetch(`http://localhost:5000/cuotas`);
+            if(res.ok){
+                let data = await res.json();
+                this.cuotas = [...data];
+                this.dx.gridCuotas.option('dataSource',this.cuotas.filter(c => c.personaId == this.personaId));
+                console.log('cuotas',this.cuotas)
+            }
+        }catch(e){
+            console.log(error)
+        }
     }
 
-    cambioEstado(personaId){
-        let { monto } = this.personas.find(p => p.personaId == personaId);
-        let totalCuotas = this.cuotas.filter(c => c.personaId == personaId && c.estado).map(c => c.monto);
+    async crearNuevaPersona(personas){
+        try{
+            const { nombres, apellidos, numero, ubicacion, monto } = personas;
+
+            let res = await fetch(`http://localhost:5000/personas`,{
+                method: 'POST',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify({nombres: nombres.trim(), apellidos: apellidos.trim(), numero: numero?.trim() || '', ubicacion: ubicacion?.trim() || '', monto: monto.trim(), estado: 0 })
+            })
+
+            if(res.ok){
+                let data = await res.json();
+                await this.cargarPersonas();
+                this.personaId = data[0].personaId;
+                this.dx.toast.option('message','Datos personales guardados');
+                this.dx.toast.option('type','success');
+                this.dx.toast.show();
+            }
+        }catch(e){
+            console.error('error',e);
+        }
+    }
+
+    async guardarDatosPersona(personaId, personas){
+        try{
+            const { nombres, apellidos, numero, ubicacion, monto } = personas;
+            
+            let res = await fetch(`http://localhost:5000/personas/${personaId}`,{
+                method: 'PUT',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify({nombres: nombres, apellidos: apellidos, numero: numero.trim() || '', ubicacion: ubicacion.trim() || '', monto: monto, estado: 0 })
+            });
+
+            if(res.ok){
+                await this.cargarPersonas();
+                this.dx.toast.option('message','Datos personales actualizados');
+                this.dx.toast.option('type','success');
+                this.dx.toast.show();
+            }
+        }catch(e){
+            console.error('error',e);
+        }
+    }
+
+    async guardarCuota(personaId,cuotaId,cuota){
+        try{
+            let res = await fetch(`http://localhost:5000/cuotas/${personaId}/${cuotaId}`,{
+                method: 'PUT',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify(cuota)
+                })
+                
+            if(res.ok){
+                await this.cargarCuotas();
+                this.dx.mdlCuotas.hide();
+                this.dx.toast.option('message','Registro actualizado');
+                this.dx.toast.option('type','success');
+                this.dx.toast.show();
+                this.cambioEstado(this.personaId);
+            }
+        }catch(e){
+            console.error('error',e);
+        }
+    }
+
+    async nuevaCuota(cuota){
+        try{
+            const { monto, estado } = cuota;
+                                
+            //Determinar nuevo id de cuotas
+            let idsCuota = this.cuotas.map(c => c.cuotaId);
+            let maxId = idsCuota.length > 0 ? Math.max(...idsCuota) + 1 : 0;
+
+            let data = {
+                cuotaId: maxId + 1,
+                personaId: this.personaId,
+                monto: monto,
+                estado: estado
+            }
+
+            let res = await fetch(`http://localhost:5000/cuotas`,{
+                method: 'POST',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify(data)
+                }) 
+
+            if(res.ok){
+                await this.cargarCuotas();
+                this.dx.mdlCuotas.hide();
+                this.dx.toast.option('message','Registrado exitosamente');
+                this.dx.toast.option('type','success');
+                this.dx.toast.show();
+                this.cambioEstado(this.personaId);
+            }
+        }catch(e){
+            console.error('error',e);
+        }
+    }
+
+    async eliminarCuota(personaId,cuotaId){
+        try{
+            let res = await fetch(`http://localhost:5000/cuotas/${personaId}/${cuotaId}`,{
+                method: 'DELETE',
+                headers:{
+                    'Content-Type':'application/json'
+                }
+            })
+            
+            if(res.ok){
+                await this.cargarCuotas();
+                this.dx.mdlEliminarCuota.hide();
+                this.dx.toast.option('message','Cuota eliminada');
+                this.dx.toast.option('type','success');
+                this.dx.toast.show();
+                this.cambioEstado(this.personaId);
+            }
+        }catch(e){
+            console.error('error',e);
+        }
+    }
+
+    async cambioEstado(personaId){
+        try{
+            let { monto } = this.personas.find(p => p.personaId == personaId);
+            let totalCuotas = this.cuotas.filter(c => c.personaId == personaId && c.estado).map(c => c.monto);
     
-        totalCuotas.forEach(c => {
-            monto -= c; 
-        });
+            totalCuotas.forEach(c => {
+                monto -= c; 
+            });
     
-        let estado = { estado: monto === 0 ? true : false }
-    
-        fetch(`http://localhost:5000/personas/estado/${personaId}`,{
-            method: 'PUT',
-            headers:{
-                'Content-Type':'application/json'
-            },
-            body: JSON.stringify(estado)
-        })
-        .then(response => response.json())
-        .then(data =>{
-            console.log('data',data);
-            this.cargarPersonas();
-        })
+            let estado = { estado: monto === 0 ? true : false }
+            
+            let res = await fetch(`http://localhost:5000/personas/estado/${personaId}`,{
+                method: 'PUT',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify(estado)
+            })
+            
+            if(res.ok){
+                this.cargarPersonas();
+            }
+        }catch(e){
+            console.error('error',e);
+        }
     }
 }
 
