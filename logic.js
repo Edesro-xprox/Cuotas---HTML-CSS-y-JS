@@ -548,7 +548,7 @@ class Cuotas{
                 headers:{
                     'Content-Type':'application/json'
                 },
-                body: JSON.stringify({nombres: nombres, apellidos: apellidos, numero: numero.trim() || '', ubicacion: ubicacion.trim() || '', monto: monto, estado: 0 })
+                body: JSON.stringify({nombres: nombres, apellidos: apellidos, numero: numero.trim() || '', ubicacion: ubicacion.trim() || '', monto: monto })
             });
 
             if(res.ok){
